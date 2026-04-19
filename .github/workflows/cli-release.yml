@@ -54,12 +54,12 @@ jobs:
         with:
           targets: ${{ matrix.target }}
 
-            - name: Install Linux Dependencies
+      - name: Install Linux Dependencies
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libssl-dev liblzma-dev pkg-config
- libglib2.0-dev libgtk-3-dev
+          sudo apt-get install -y libssl-dev liblzma-dev pkg-config libglib2.0-dev libgtk-3-dev
+
 
       - name: Rust Cache
         uses: swatinem/rust-cache@v2
