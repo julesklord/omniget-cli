@@ -246,3 +246,6 @@ scratch/
 
 # Trunk linter
 .trunk/
+
+# TEMPORARY - flatpak folder
+flatpak/
