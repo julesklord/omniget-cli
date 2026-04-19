@@ -3,7 +3,7 @@ name: CLI Release
 on:
   push:
     tags:
-      - 'v*.*.*'
+      - v*.*.*
 
 permissions:
   contents: write
@@ -22,7 +22,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release create ${{ github.ref_name }} \
-            --title "Release ${{ github.ref_name }}" \
+            --title "${{ github.ref_name }}" \
             --generate-notes
 
   build:
@@ -54,11 +54,12 @@ jobs:
         with:
           targets: ${{ matrix.target }}
 
-      - name: Install Linux Dependencies
+            - name: Install Linux Dependencies
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install -y liblzma-dev pkg-config
+          sudo apt-get install -y libssl-dev liblzma-dev pkg-config
+ libglib2.0-dev libgtk-3-dev
 
       - name: Rust Cache
         uses: swatinem/rust-cache@v2
