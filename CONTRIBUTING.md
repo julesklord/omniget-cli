@@ -1,76 +1,75 @@
-# Contributing to OmniGet
+# Contributing to OmniGet CLI
 
 Thanks for taking the time to contribute.
 
-## Running the dev build
+## Prerequisites
 
-**Prerequisites:** [Rust](https://rustup.rs/) stable, [Node.js](https://nodejs.org/) 18+, [pnpm](https://pnpm.io/) 10+.
+- [Rust](https://rustup.rs/) 1.70+ (stable toolchain)
+- [Git](https://git-scm.com/)
 
-On Linux, install the Tauri system dependencies first:
+No Node.js, pnpm, or frontend tooling is required for CLI development.
+
+## Building the CLI
 
 ```bash
-sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev patchelf
+git clone https://github.com/julesklord/omniget-cli.git
+cd omniget-cli
+cargo build -p omniget-cli
 ```
 
-Then:
+Run the CLI directly during development:
 
 ```bash
-git clone https://github.com/tonhowtf/omniget.git
-cd omniget
-pnpm install
-pnpm tauri dev
+cargo run -p omniget-cli -- --help
+cargo run -p omniget-cli -- check
+cargo run -p omniget-cli -- download https://example.com/video
+```
+
+Build a release binary:
+
+```bash
+cargo build -p omniget-cli --release
+```
+
+The binary will be at `src-tauri/target/release/omniget-cli` (or `omniget-cli.exe` on Windows).
+
+## Project structure
+
+```
+src-tauri/
+├── omniget-cli/        # CLI binary crate (clap + indicatif)
+│   └── src/
+│       ├── main.rs     # Command definitions and dispatch
+│       └── reporter.rs # CLI progress bar reporter
+├── omniget-core/       # Shared library crate
+│   └── src/
+│       ├── core/       # Download engine, dependencies, HTTP client, yt-dlp integration
+│       │   ├── manager/    # Queue, recovery, download log
+│       │   ├── traits.rs   # DownloadReporter trait
+│       │   └── ...
+│       └── models/     # Data structures (queue items, settings)
+└── omniget-lib/        # Platform implementations (YouTube, Instagram, etc.)
 ```
 
 ## Before opening a pull request
 
-Run these locally — CI runs the same checks:
+Run these checks locally:
 
 ```bash
 cd src-tauri
 cargo fmt --all
 cargo clippy --workspace --all-targets
 cargo test --workspace
-
-cd ..
-pnpm check
 ```
 
-## Adding a translation
+All three must pass cleanly before submitting.
 
-Translations live in two places:
+## What to work on
 
-**Main app** (`src/lib/i18n/`):
-
-1. Copy `en.json` to `<locale>.json` (e.g. `es.json`) and translate the values.
-2. Register the locale in `src/lib/i18n/index.ts` by adding an entry to the `loaders` array:
-
-   ```ts
-   {
-     locale: "es",
-     key: "",
-     loader: async () => (await import("./es.json")).default,
-   },
-   ```
-
-3. Add a `lang_<locale>` entry (e.g. `"lang_es": "Español"`) under `settings.appearance` in **every** `src/lib/i18n/*.json` file.
-4. Add a matching `<option>` to the language selector in `src/routes/settings/+page.svelte`:
-
-   ```svelte
-   <option value="es">{$t('settings.appearance.lang_es')}</option>
-   ```
-
-5. Regenerate the translation key types:
-
-   ```bash
-   pnpm generate:i18n-keys
-   ```
-
-**Browser extension** (`browser-extension/chrome/_locales/` and `browser-extension/firefox/_locales/`):
-
-1. Create an `<locale>/` folder in both (e.g. `es/`).
-2. Copy `en/messages.json` into it and translate the `message` fields. Leave the keys and `description` fields unchanged.
-
-Run `pnpm check` before opening the PR.
+- **Bug fixes**: If you find a bug, open an issue first, then submit a fix.
+- **New platforms**: Add a new downloader in `src-tauri/omniget-lib/src/platforms/` implementing the `PlatformDownloader` trait.
+- **Core improvements**: Enhancements to the download queue, progress reporting, or dependency management in `omniget-core`.
+- **Documentation**: Improvements to README, inline docs, or usage examples.
 
 ## Commit style
 
