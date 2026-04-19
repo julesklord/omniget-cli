@@ -1,6 +1,6 @@
 {
   "name": "omniget-cli",
-  "version": "0.4.2",
+  "version": "0.1.1-fix",
   "description": "OmniGet command-line companion and shared download core.",
   "type": "module",
   "packageManager": "pnpm@10.29.3",

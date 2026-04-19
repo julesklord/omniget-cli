@@ -17,7 +17,7 @@
 </p>
 
 <p align="center">
-  <img src="" alt="" width="720" />
+  <img src="demo.gif" alt="omniget-cli demo" width="720" />
 </p>
 
 ---
@@ -48,10 +48,10 @@ This repository contains the CLI binary and a shared core library (`omniget-core
 ```bash
 git clone https://github.com/julesklord/omniget-cli.git
 cd omniget-cli
-cargo build -p omniget-cli --release
+cargo build --release
 ```
 
-The binary is output to `src-tauri/target/release/omniget-cli` (or `omniget-cli.exe` on Windows).
+The binary is output to `target/release/omniget-cli` (or `omniget-cli.exe` on Windows).
 
 ### Prerequisites
 
@@ -301,33 +301,39 @@ omniget-cli about [TOPIC]
 
 ## Architecture
 
+The OmniGet monorepo is structured around a shared core library, `omniget-core`, which provides a platform-agnostic download engine. This allows both the GUI and CLI to share the same underlying logic for downloads, dependency management, and platform integration.
+
 ```
-omniget-cli/
-├── src-tauri/
-│   ├── omniget-cli/          # CLI binary (clap + indicatif)
-│   │   └── src/
-│   │       ├── main.rs       # Command definitions and dispatch
-│   │       └── reporter.rs   # Terminal progress bar reporter
-│   ├── omniget-core/         # Shared library
-│   │   └── src/
-│   │       ├── core/
-│   │       │   ├── manager/  # Download queue, recovery, logging
-│   │       │   ├── traits.rs # DownloadReporter trait interface
-│   │       │   ├── dependencies.rs
-│   │       │   ├── http_client.rs
-│   │       │   └── ytdlp.rs
-│   │       └── models/       # Queue items, settings, media info
-│   └── omniget-lib/          # Platform implementations
-│       └── src/platforms/    # YouTube, Instagram, TikTok, etc.
-├── docs/                     # Project documentation
-└── CONTRIBUTING.md
+omniget/
+└── src-tauri/
+    ├── omniget-cli/            # CLI binary (clap + indicatif)
+    │   ├── src/
+    │   │   ├── main.rs         # Command definitions and dispatch
+    │   │   └── reporter.rs     # Terminal progress bar UI
+    │
+    ├── omniget-core/           # SHARED CORE LIBRARY
+    │   └── src/
+    │       ├── core/
+    │       │   ├── manager/    # Download queue, recovery, logging
+    │       │   ├── traits.rs   # DownloadReporter & PlatformDownloader traits
+    │       │   └── ...         # (dependencies, http_client, ytdlp)
+    │       ├── platforms/      # All platform implementations (YouTube, etc.)
+    │       └── models/         # Data structs (QueueItem, AppSettings)
+    │
+    └── omniget/ (GUI)          # Main Tauri application crate
+        └── src/
+            ├── commands/       # IPC command handlers
+            └── core/
+                └── reporters.rs  # GUI event emitter
 ```
 
 | Crate | Role |
-|-------|------|
-| `omniget-cli` | CLI binary with argument parsing and terminal UI |
-| `omniget-core` | Download engine, queue, dependency management, traits |
-| `omniget-lib` | Platform-specific downloaders implementing `PlatformDownloader` |
+|---|---|
+| `omniget-cli` | Standalone CLI binary. Uses `omniget-core`. |
+| `omniget` (GUI) | Tauri desktop application. Uses `omniget-core`. |
+| `omniget-core` | **The Engine**. Contains all business logic: download queue, dependency management, and all platform-specific downloaders. It is UI-agnostic. |
+
+This architecture ensures that new features or bug fixes applied to `omniget-core` are instantly available to both the CLI and the GUI, preventing logic drift and reducing maintenance overhead.
 
 ## Configuration
 

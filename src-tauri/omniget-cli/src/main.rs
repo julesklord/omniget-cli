@@ -9,7 +9,6 @@ use omniget_core::models::settings::AppSettings;
 use omniget_core::core::manager::recovery;
 use crate::reporter::CLIReporter;
 use std::sync::Arc;
-use std::path::PathBuf;
 
 #[derive(Parser)]
 #[command(name = "omniget-cli")]
@@ -307,11 +306,11 @@ async fn main() -> Result<()> {
             let topic = topic.unwrap_or(AboutTopic::Version);
             match topic {
                 AboutTopic::Version => {
-                    println!("OmniGet CLI v0.1.0");
+                    println!("OmniGet CLI v{}", env!("CARGO_PKG_VERSION"));
                     println!("Build Edition: 2021");
                 },
                 AboutTopic::Roadmap => println!("Roadmap: TUI integration, Plugin Manager, P2P support."),
-                AboutTopic::Changelog => println!("Changelog: v0.1.0 - Initial CLI release with unified core."),
+                AboutTopic::Changelog => println!("Changelog: v0.1.1-fix - Fixed build architecture and root workspace integration."),
                 AboutTopic::Terms => println!("Terms: Open source. Respect content creator rights."),
             }
         }

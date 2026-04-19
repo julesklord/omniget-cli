@@ -1,10 +1,6 @@
-[workspace]
-members = [".", "omniget-core", "omniget-plugin-sdk", "omniget-cli"]
-resolver = "2"
-
 [package]
 name = "omniget"
-version = "0.4.2"
+version = "0.1.1-fix"
 description = "A Tauri App"
 authors = ["you"]
 edition = "2021"
@@ -52,7 +48,7 @@ tar = "0.4"
 xz2 = "0.1"
 sha2 = "0.10"
 open = "5"
-omniget-core = { path = "omniget-core", features = ["desktop"] }
+omniget-core = { path = "omniget-core", features = ["desktop", "platforms"] }
 omniget-plugin-sdk = { path = "omniget-plugin-sdk" }
 libloading = "0.8"
 which = "7"
@@ -70,16 +66,3 @@ tauri-plugin-clipboard-manager = "2"
 tauri-plugin-single-instance = "2"
 tauri-plugin-deep-link = "2"
 
-[profile.dev]
-debug = 0
-codegen-units = 256
-incremental = true
-
-[profile.dev.package."*"]
-debug = false
-opt-level = 1
-
-[profile.release]
-lto = "thin"
-codegen-units = 1
-strip = true

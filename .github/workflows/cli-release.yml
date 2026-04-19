@@ -1,0 +1,84 @@
+name: CLI Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  create-release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create Release
+        id: create_release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create ${{ github.ref_name }} \
+            --title "Release ${{ github.ref_name }}" \
+            --generate-notes
+
+  build:
+    name: Build ${{ matrix.target }}
+    needs: create-release
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+            suffix: .exe
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+            suffix: ''
+          - target: x86_64-apple-darwin
+            os: macos-latest
+            suffix: ''
+          - target: aarch64-apple-darwin
+            os: macos-latest
+            suffix: ''
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install Linux Dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y liblzma-dev pkg-config
+
+      - name: Rust Cache
+        uses: swatinem/rust-cache@v2
+
+      - name: Build CLI
+        shell: bash
+        run: |
+          cargo build --release -p omniget-cli --target ${{ matrix.target }}
+
+      - name: Prepare Artifact
+        shell: bash
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          BINARY_NAME="omniget-cli-${{ matrix.target }}${{ matrix.suffix }}"
+          cp target/${{ matrix.target }}/release/omniget-cli${{ matrix.suffix }} ./$BINARY_NAME
+          echo "ASSET=$BINARY_NAME" >> $GITHUB_ENV
+
+      - name: Upload Release Asset
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          gh release upload ${{ github.ref_name }} ${{ env.ASSET }} --clobber
