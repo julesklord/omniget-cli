@@ -22,16 +22,32 @@ fn test_queue_lifecycle() {
 
     // Mock downloader
     struct MockDownloader;
+    #[async_trait::async_trait]
     impl omniget_core::platforms::traits::PlatformDownloader for MockDownloader {
         fn name(&self) -> &str { "mock" }
-        fn matches(&self, _url: &str) -> bool { true }
-        fn get_media_info(&self, _url: &str) -> omniget_core::platforms::traits::PlatformResult<omniget_core::models::media::MediaInfo> {
-            Ok(omniget_core::models::media::MediaInfo::default())
+        fn can_handle(&self, _url: &str) -> bool { true }
+        async fn get_media_info(&self, _url: &str) -> anyhow::Result<omniget_core::models::media::MediaInfo> {
+            Ok(omniget_core::models::media::MediaInfo {
+                title: "mock".into(),
+                author: "mock".into(),
+                platform: "mock".into(),
+                duration_seconds: None,
+                thumbnail_url: None,
+                available_qualities: vec![],
+                media_type: omniget_core::models::media::MediaType::Video,
+                file_size_bytes: None,
+            })
         }
-        fn download(&self, _info: &omniget_core::models::media::MediaInfo, _opts: &omniget_core::models::media::DownloadOptions, _tx: tokio::sync::mpsc::Sender<f64>) -> omniget_core::platforms::traits::PlatformResult<omniget_core::models::media::DownloadResult> {
+        async fn download(
+            &self, 
+            _info: &omniget_core::models::media::MediaInfo, 
+            _opts: &omniget_core::models::media::DownloadOptions, 
+            _tx: tokio::sync::mpsc::Sender<f64>
+        ) -> anyhow::Result<omniget_core::models::media::DownloadResult> {
              Ok(omniget_core::models::media::DownloadResult {
                 file_path: std::path::PathBuf::from("test"),
                 file_size_bytes: 0,
+                duration_seconds: 0.0,
                 torrent_id: None,
             })
         }
