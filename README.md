@@ -16,10 +16,6 @@
   <img src="https://img.shields.io/badge/rust-1.70%2B-orange?style=for-the-badge&logo=rust" alt="Rust 1.70+" />
 </p>
 
-<p align="center">
-  <img src="demo.gif" alt="omniget-cli demo" width="720" />
-</p>
-
 ---
 
 ## Overview
