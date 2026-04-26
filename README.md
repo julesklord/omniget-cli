@@ -308,28 +308,95 @@ omniget-cli about [TOPIC]
 
 The OmniGet monorepo is structured around a shared core library, `omniget-core`, which provides a platform-agnostic download engine. This allows both the GUI and CLI to share the same underlying logic for downloads, dependency management, and platform integration.
 
-```
-omniget/
-└── src-tauri/
-    ├── omniget-cli/            # CLI binary (clap + indicatif)
-    │   ├── src/
-    │   │   ├── main.rs         # Command definitions and dispatch
-    │   │   └── reporter.rs     # Terminal progress bar UI
-    │
-    ├── omniget-core/           # SHARED CORE LIBRARY
-    │   └── src/
-    │       ├── core/
-    │       │   ├── manager/    # Download queue, recovery, logging
-    │       │   ├── traits.rs   # DownloadReporter & PlatformDownloader traits
-    │       │   └── ...         # (dependencies, http_client, ytdlp)
-    │       ├── platforms/      # All platform implementations (YouTube, etc.)
-    │       └── models/         # Data structs (QueueItem, AppSettings)
-    │
-    └── omniget/ (GUI)          # Main Tauri application crate
-        └── src/
-            ├── commands/       # IPC command handlers
-            └── core/
-                └── reporters.rs  # GUI event emitter
+```mermaid
+flowchart TD
+
+subgraph group_group_rust_core["Rust core"]
+  node_node_core["Core engine<br/>shared engine<br/>[mod.rs]"]
+  node_node_platforms["Platforms<br/>handlers<br/>[mod.rs]"]
+  node_node_models["Models<br/>domain types<br/>[mod.rs]"]
+  node_node_runtime_tools["Runtime tools<br/>external binaries<br/>[ytdlp.rs]"]
+  node_node_pathing["Paths & logs<br/>storage logic<br/>[filename.rs]"]
+end
+
+subgraph group_group_app_runtime["App runtimes"]
+  node_node_cli["CLI<br/>rust binary<br/>[main.rs]"]
+  node_node_cli_output["CLI output<br/>presentation<br/>[output.rs]"]
+  node_node_tauri["Tauri backend<br/>desktop runtime<br/>[main.rs]"]
+  node_node_commands["IPC commands<br/>bridge layer<br/>[mod.rs]"]
+  node_node_storage[("Storage<br/>app state<br/>[mod.rs]")]
+  node_node_plugins["Plugins<br/>extension host<br/>[plugin_host.rs]"]
+  node_node_native_host["Native handoff<br/>integration bridge<br/>[native_host.rs]"]
+end
+
+subgraph group_group_frontend["Desktop UI"]
+  node_node_frontend["Svelte app<br/>desktop ui<br/>[+page.svelte]"]
+  node_node_stores["UI stores<br/>state layer"]
+  node_node_routes["Screens<br/>routes<br/>[+page.svelte]"]
+end
+
+subgraph group_group_browser["Browser extensions"]
+  node_node_browser_chrome["Chrome ext<br/>browser extension<br/>[background.js]"]
+  node_node_browser_firefox["Firefox ext<br/>browser extension<br/>[background.js]"]
+end
+
+subgraph group_group_tooling["Tooling"]
+  node_node_release["Release & build<br/>automation<br/>[release.yml]"]
+end
+
+node_node_cli -->|"executes"| node_node_core
+node_node_cli -->|"reports"| node_node_cli_output
+node_node_tauri -->|"exposes"| node_node_commands
+node_node_commands -->|"uses"| node_node_core
+node_node_commands -->|"persists"| node_node_storage
+node_node_tauri -->|"hosts"| node_node_plugins
+node_node_tauri -->|"bridges"| node_node_native_host
+node_node_frontend -->|"drives"| node_node_stores
+node_node_frontend -->|"organizes"| node_node_routes
+node_node_stores -->|"calls"| node_node_commands
+node_node_browser_chrome -->|"hands off"| node_node_native_host
+node_node_browser_firefox -->|"hands off"| node_node_native_host
+node_node_browser_chrome -.->|"parallel"| node_node_browser_firefox
+node_node_core -->|"dispatches"| node_node_platforms
+node_node_core -->|"orchestrates"| node_node_runtime_tools
+node_node_core -->|"shares"| node_node_models
+node_node_core -->|"manages"| node_node_pathing
+node_node_release -->|"packages"| node_node_cli
+node_node_release -->|"packages"| node_node_tauri
+node_node_release -->|"packages"| node_node_browser_chrome
+node_node_release -->|"packages"| node_node_browser_firefox
+
+click node_node_core "https://github.com/julesklord/omniget-cli/blob/main/src-tauri/omniget-core/src/core/mod.rs"
+click node_node_platforms "https://github.com/julesklord/omniget-cli/blob/main/src-tauri/omniget-core/src/platforms/mod.rs"
+click node_node_models "https://github.com/julesklord/omniget-cli/blob/main/src-tauri/omniget-core/src/models/mod.rs"
+click node_node_runtime_tools "https://github.com/julesklord/omniget-cli/blob/main/src-tauri/omniget-core/src/core/ytdlp.rs"
+click node_node_pathing "https://github.com/julesklord/omniget-cli/blob/main/src-tauri/omniget-core/src/core/filename.rs"
+click node_node_cli "https://github.com/julesklord/omniget-cli/blob/main/src-tauri/omniget-cli/src/main.rs"
+click node_node_cli_output "https://github.com/julesklord/omniget-cli/blob/main/src-tauri/omniget-cli/src/output.rs"
+click node_node_tauri "https://github.com/julesklord/omniget-cli/blob/main/src-tauri/src/main.rs"
+click node_node_commands "https://github.com/julesklord/omniget-cli/blob/main/src-tauri/src/commands/mod.rs"
+click node_node_storage "https://github.com/julesklord/omniget-cli/blob/main/src-tauri/src/storage/mod.rs"
+click node_node_plugins "https://github.com/julesklord/omniget-cli/blob/main/src-tauri/src/plugin_host.rs"
+click node_node_native_host "https://github.com/julesklord/omniget-cli/blob/main/src-tauri/src/native_host.rs"
+click node_node_frontend "https://github.com/julesklord/omniget-cli/blob/main/src/routes/+page.svelte"
+click node_node_stores "https://github.com/julesklord/omniget-cli/blob/main/src/lib/stores/download-store.svelte.ts"
+click node_node_routes "https://github.com/julesklord/omniget-cli/blob/main/src/routes/downloads/+page.svelte"
+click node_node_browser_chrome "https://github.com/julesklord/omniget-cli/blob/main/browser-extension/chrome/src/background.js"
+click node_node_browser_firefox "https://github.com/julesklord/omniget-cli/blob/main/browser-extension/firefox/src/background.js"
+click node_node_release "https://github.com/julesklord/omniget-cli/blob/main/.github/workflows/release.yml"
+
+classDef toneNeutral fill:#f8fafc,stroke:#334155,stroke-width:1.5px,color:#0f172a
+classDef toneBlue fill:#dbeafe,stroke:#2563eb,stroke-width:1.5px,color:#172554
+classDef toneAmber fill:#fef3c7,stroke:#d97706,stroke-width:1.5px,color:#78350f
+classDef toneMint fill:#dcfce7,stroke:#16a34a,stroke-width:1.5px,color:#14532d
+classDef toneRose fill:#ffe4e6,stroke:#e11d48,stroke-width:1.5px,color:#881337
+classDef toneIndigo fill:#e0e7ff,stroke:#4f46e5,stroke-width:1.5px,color:#312e81
+classDef toneTeal fill:#ccfbf1,stroke:#0f766e,stroke-width:1.5px,color:#134e4a
+class node_node_core,node_node_platforms,node_node_models,node_node_runtime_tools,node_node_pathing toneBlue
+class node_node_cli,node_node_cli_output,node_node_tauri,node_node_commands,node_node_storage,node_node_plugins,node_node_native_host toneAmber
+class node_node_frontend,node_node_stores,node_node_routes toneMint
+class node_node_browser_chrome,node_node_browser_firefox toneRose
+class node_node_release toneIndigo
 ```
 
 | Crate | Role |
