@@ -83,3 +83,26 @@ jobs:
         shell: bash
         run: |
           gh release upload ${{ github.ref_name }} ${{ env.ASSET }} --clobber
+
+  publish-crates:
+    name: Publish to Crates.io
+    needs: create-release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+      - name: Publish omniget-core
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: cargo publish -p omniget-core
+      - name: Wait for core index
+        run: sleep 60
+      - name: Publish omniget-plugin-sdk
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: cargo publish -p omniget-plugin-sdk
+      - name: Publish omniget-cli
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: cargo publish -p omniget-cli
