@@ -1,7 +1,14 @@
 [package]
 name = "omniget-core"
-version = "0.2.16"
+version = "0.2.0"
 edition = "2021"
+description = "Core download engine for OmniGet"
+authors = ["Jules Martins <TU_ID+julesklord@users.noreply.github.com>"]
+license = "GPL-3.0-or-later"
+repository = "https://github.com/julesklord/omniget-cli"
+readme = "../README.md"
+keywords = ["omniget", "downloader", "engine", "video"]
+categories = ["multimedia"]
 
 [lib]
 name = "omniget_core"

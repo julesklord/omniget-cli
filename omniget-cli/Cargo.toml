@@ -2,9 +2,16 @@
 name = "omniget-cli"
 version = "0.2.0"
 edition = "2021"
+description = "Command-line interface for OmniGet download manager"
+authors = ["Jules Martins <TU_ID+julesklord@users.noreply.github.com>"]
+license = "GPL-3.0-or-later"
+repository = "https://github.com/julesklord/omniget-cli"
+readme = "../README.md"
+keywords = ["omniget", "downloader", "cli", "video"]
+categories = ["command-line-utilities"]
 
 [dependencies]
-omniget-core = { path = "../omniget-core", features = ["manager", "platforms"] }
+omniget-core = { path = "../omniget-core", version = "0.2.0", features = ["manager", "platforms"] }
 clap = { version = "4.4", features = ["derive", "cargo"] }
 indicatif = "0.17"
 tokio = { version = "1", features = ["full"] }
