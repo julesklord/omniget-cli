@@ -1,14 +1,13 @@
 [workspace]
 resolver = "2"
 members = [
-    "src-tauri",
-    "src-tauri/omniget-core",
-    "src-tauri/omniget-plugin-sdk",
-    "src-tauri/omniget-cli",
+    "omniget-core",
+    "omniget-plugin-sdk",
+    "omniget-cli",
 ]
 
 # This makes 'cargo run' from root execute the CLI by default
-default-members = ["src-tauri/omniget-cli"]
+default-members = ["omniget-cli"]
 
 [profile.dev]
 debug = 0
