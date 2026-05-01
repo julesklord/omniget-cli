@@ -1,8 +1,9 @@
-<p align="center">
-  <img src="assets/loop.png" alt="OmniGet" width="100" />
-</p>
 
 <h1 align="center">OmniGet</h1>
+
+<p align="center">
+  <img src="assets/screenshot.png" alt="OmniGet" width="750" />
+</p>
 
 <p align="center">
   <strong>Download media from 1000+ sites — terminal-first.</strong><br>
@@ -40,19 +41,23 @@ No GUI bloat. No Electron. Just a fast, self-contained binary.
 ## Installation
 
 ### Precompiled binaries
+
 1. Go to the [Releases page](https://github.com/julesklord/omniget/releases/latest).
 2. Download the binary for your OS (`.exe` for Windows, ELF for Linux/macOS).
 3. Add it to your PATH.
 
 ### From source
-```bash
+
+```pwsh
 git clone https://github.com/julesklord/omniget.git
 cd omniget
 cargo build --release
 ```
+
 Binary is at `target/release/omniget-cli`.
 
 ### Prerequisites
+
 - [Rust](https://rustup.rs/) 1.70+ (stable)
 - Git
 
@@ -60,7 +65,7 @@ All runtime dependencies (yt-dlp, FFmpeg) are managed automatically.
 
 ## Usage
 
-```
+```pwsh
 omniget-cli [OPTIONS] <COMMAND>
 ```
 
@@ -74,7 +79,7 @@ omniget-cli [OPTIONS] <COMMAND>
 
 ### `download` — Download media from a URL
 
-```bash
+```pwsh
 omniget-cli download <URL> [OPTIONS]
 ```
 
@@ -85,6 +90,7 @@ omniget-cli download <URL> [OPTIONS]
 | `-a`, `--audio-only` | Extract audio only |
 
 **Examples:**
+
 ```bash
 omniget-cli download "https://www.youtube.com/watch?v=dQw4w9WgXcQ" -q 1080p
 omniget-cli download "https://www.youtube.com/watch?v=dQw4w9WgXcQ" --audio-only -o ~/Music
@@ -92,27 +98,33 @@ omniget-cli download "https://www.instagram.com/reel/ABC123/"
 ```
 
 ### `download-multiple` — Batch download from a file
+
 ```bash
 omniget-cli download-multiple urls.txt -o ~/Videos
 ```
+
 One URL per line.
 
 ### `info` — Inspect media metadata
+
 ```bash
 omniget-cli info "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
 ```
 
 ### `list` — List queue items
+
 ```bash
 omniget-cli list [--active] [--queued] [--completed] [--failed]
 ```
 
 ### `clean` — Clear download history
+
 ```bash
 omniget-cli clean [--finished] [--failed]
 ```
 
 ### `config` — Manage settings
+
 ```bash
 omniget-cli config list
 omniget-cli config get download.default_output_dir
@@ -120,22 +132,27 @@ omniget-cli config set download.video_quality "1080p"
 ```
 
 ### `check` — Verify dependencies
+
 ```bash
 omniget-cli check
 ```
+
 Downloads missing yt-dlp / FFmpeg if needed.
 
 ### `update` — Force-update internal deps
+
 ```bash
 omniget-cli update
 ```
 
 ### `logs` — View activity logs
+
 ```bash
 omniget-cli logs --tail 50
 ```
 
 ### `about` — App info
+
 ```bash
 omniget-cli about [version|roadmap|changelog|terms]
 ```
@@ -143,6 +160,7 @@ omniget-cli about [version|roadmap|changelog|terms]
 ## Supported platforms
 
 ### Media platforms
+
 | Platform | Content |
 |----------|---------|
 | YouTube | Videos, Shorts, Playlists |
@@ -157,13 +175,14 @@ omniget-cli about [version|roadmap|changelog|terms]
 | Bilibili | Videos, Series |
 
 ### Additional
+
 - **Torrent / Magnet**: via built-in client (`librqbit`)
 - **Generic yt-dlp**: 1000+ sites
 - **P2P file sharing**: planned
 
 ## Architecture
 
-```
+```plain
 omniget/
 ├── omniget-cli/          # CLI binary (clap + indicatif)
 │   └── src/
