@@ -40,6 +40,14 @@ No GUI bloat. No Electron. Just a fast, self-contained binary.
 
 ## Installation
 
+### Install with Cargo
+
+You can install OmniGet directly from [crates.io](https://crates.io/crates/omniget-cli):
+
+```bash
+cargo install omniget-cli
+```
+
 ### Precompiled binaries
 
 1. Go to the [Releases page](https://github.com/julesklord/omniget/releases/latest).
