@@ -1,13 +1,13 @@
 [package]
-name = "omniget-plugin-sdk"
+name = "mangofetch-plugin-sdk"
 version = "0.2.0"
 edition = "2021"
-description = "SDK for building OmniGet plugins"
+description = "SDK for building MangoFetch plugins"
 authors = ["Jules Martins <TU_ID+julesklord@users.noreply.github.com>"]
 license = "GPL-3.0-or-later"
-repository = "https://github.com/julesklord/omniget-cli"
+repository = "https://github.com/julesklord/mangofetch-cli"
 readme = "../README.md"
-keywords = ["omniget", "plugin", "sdk", "downloader"]
+keywords = ["mangofetch", "plugin", "sdk", "downloader"]
 categories = ["development-tools"]
 
 [dependencies]

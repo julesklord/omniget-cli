@@ -263,7 +263,7 @@ pub fn generate_code() -> String {
 
     let mut rng = thread_rng();
     let mut indices = Vec::with_capacity(4);
-    
+
     let mut nums: Vec<usize> = (0..256).collect();
     nums.shuffle(&mut rng);
 

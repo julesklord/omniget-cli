@@ -16,17 +16,17 @@ impl AppPaths for DesktopPaths {
 
     fn data_dir(&self) -> PathBuf {
         dirs::data_dir()
-            .map(|d| d.join("omniget"))
+            .map(|d| d.join("mangofetch"))
             .unwrap_or_else(|| PathBuf::from("."))
     }
 
     fn cache_dir(&self) -> PathBuf {
         dirs::cache_dir()
-            .map(|d| d.join("omniget"))
+            .map(|d| d.join("mangofetch"))
             .unwrap_or_else(|| PathBuf::from("."))
     }
 
     fn bin_dir(&self) -> Option<PathBuf> {
-        dirs::data_dir().map(|d| d.join("omniget").join("bin"))
+        dirs::data_dir().map(|d| d.join("mangofetch").join("bin"))
     }
 }

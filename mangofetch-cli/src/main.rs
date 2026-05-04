@@ -1,15 +1,18 @@
-mod reporter;
-mod output; // NEW: Import output formatters module
+mod output;
+mod reporter; // NEW: Import output formatters module
 
+use crate::output::{
+    format_batch_summary, format_clean_summary, format_config_display, format_dependency_check,
+    format_info_card, format_queue_list,
+};
+use crate::reporter::{BrutalistTheme, CLIReporter, CliTheme};
 use anyhow::Result;
 use clap::{Parser, Subcommand};
-use omniget_core::core::manager::queue::DownloadQueue;
-use omniget_core::models::queue::QueueStatus;
-use omniget_core::core::registry::PlatformRegistry;
-use omniget_core::models::settings::AppSettings;
-use omniget_core::core::manager::recovery;
-use crate::reporter::{CLIReporter, CliTheme, BrutalistTheme};
-use crate::output::{format_info_card, format_queue_list, format_config_display, format_dependency_check, format_batch_summary, format_clean_summary};
+use mangofetch_core::core::manager::queue::DownloadQueue;
+use mangofetch_core::core::manager::recovery;
+use mangofetch_core::core::registry::PlatformRegistry;
+use mangofetch_core::models::queue::QueueStatus;
+use mangofetch_core::models::settings::AppSettings;
 use std::sync::Arc;
 
 // ============================================================================
@@ -17,8 +20,8 @@ use std::sync::Arc;
 // ============================================================================
 
 #[derive(Parser)]
-#[command(name = "omniget-cli")]
-#[command(about = "OmniGet Command Line Interface", long_about = None)]
+#[command(name = "mangofetch")]
+#[command(about = "MangoFetch Command Line Interface", long_about = None)]
 #[command(version = env!("CARGO_PKG_VERSION"))]
 struct Cli {
     #[command(subcommand)]
@@ -61,7 +64,7 @@ enum Commands {
     DownloadMultiple {
         /// Path to the text file containing URLs
         file: String,
-        
+
         /// Output directory
         #[arg(short, long)]
         output: Option<String>,
@@ -84,7 +87,7 @@ enum Commands {
         /// Show only active downloads
         #[arg(long)]
         active: bool,
-        
+
         /// Show only queued downloads
         #[arg(long)]
         queued: bool,
@@ -160,9 +163,9 @@ enum AboutTopic {
 #[tokio::main]
 async fn main() -> Result<()> {
     let cli = Cli::parse();
-    
+
     // Initialize logging
-    omniget_core::core::logger::init_logging(cli.verbose);
+    mangofetch_core::core::logger::init_logging(cli.verbose);
 
     // Initialize recovery from disk
     recovery::init_from_disk();
@@ -182,17 +185,35 @@ async fn main() -> Result<()> {
     let mut registry = PlatformRegistry::new();
     register_platforms(&mut registry);
 
-    let queue = Arc::new(tokio::sync::Mutex::new(DownloadQueue::new(3, Some(reporter.clone()))));
+    let queue = Arc::new(tokio::sync::Mutex::new(DownloadQueue::new(
+        3,
+        Some(reporter.clone()),
+    )));
 
     // ========================================================================
     // COMMAND DISPATCHER
     // ========================================================================
 
     match cli.command {
-        Commands::Download { url, output, quality, audio_only } => {
-            perform_download(&url, output, quality, audio_only, &registry, &queue, reporter.clone(), &theme).await?;
+        Commands::Download {
+            url,
+            output,
+            quality,
+            audio_only,
+        } => {
+            perform_download(
+                &url,
+                output,
+                quality,
+                audio_only,
+                &registry,
+                &queue,
+                reporter.clone(),
+                &theme,
+            )
+            .await?;
             wait_for_queue(&queue).await;
-        },
+        }
 
         Commands::DownloadMultiple { file, output } => {
             let content = std::fs::read_to_string(&file)?;
@@ -201,33 +222,67 @@ async fn main() -> Result<()> {
                 .map(|s| s.trim().to_string())
                 .filter(|s| !s.is_empty())
                 .collect();
-            
+
             let total = urls.len();
             let mut failed = 0;
 
-            println!("{}📥 Starting batch download of {} URLs{}...\n", theme.color_info(), total, theme.color_reset());
+            println!(
+                "{}📥 Starting batch download of {} URLs{}...\n",
+                theme.color_info(),
+                total,
+                theme.color_reset()
+            );
 
             for (idx, url) in urls.iter().enumerate() {
                 println!("  [{}/{}] Queueing: {}", idx + 1, total, url);
-                if let Err(e) = perform_download(url, output.clone(), None, false, &registry, &queue, reporter.clone(), &theme).await {
-                    eprintln!("  {}✗ Error queueing: {}{}",theme.color_error(), e, theme.color_reset());
+                if let Err(e) = perform_download(
+                    url,
+                    output.clone(),
+                    None,
+                    false,
+                    &registry,
+                    &queue,
+                    reporter.clone(),
+                    &theme,
+                )
+                .await
+                {
+                    eprintln!(
+                        "  {}✗ Error queueing: {}{}",
+                        theme.color_error(),
+                        e,
+                        theme.color_reset()
+                    );
                     failed += 1;
                 }
             }
-            
-            println!("{}", format_batch_summary(total, total - failed, failed, &theme));
+
+            println!(
+                "{}",
+                format_batch_summary(total, total - failed, failed, &theme)
+            );
             wait_for_queue(&queue).await;
-        },
+        }
 
         Commands::Info { url } => {
-            let downloader = registry.find_platform(&url)
+            let downloader = registry
+                .find_platform(&url)
                 .ok_or_else(|| anyhow::anyhow!("No supported platform found for URL"))?;
             let platform_name = downloader.name().to_string();
 
-            println!("{}🔍 Fetching media info...{}\n", theme.color_info(), theme.color_reset());
-            
-            let info = omniget_core::core::manager::queue::fetch_and_cache_info(&url, &*downloader, &platform_name).await?;
-            
+            println!(
+                "{}🔍 Fetching media info...{}\n",
+                theme.color_info(),
+                theme.color_reset()
+            );
+
+            let info = mangofetch_core::core::manager::queue::fetch_and_cache_info(
+                &url,
+                &*downloader,
+                &platform_name,
+            )
+            .await?;
+
             // Use formatted card output
             let card = format_info_card(
                 &info.title,
@@ -238,27 +293,40 @@ async fn main() -> Result<()> {
                 &theme,
             );
             println!("{}", card);
-        },
+        }
 
         Commands::Send { file } => {
-            println!("{}⚠ P2P Send not yet implemented in CLI. File: {}{}",theme.color_warning(), file, theme.color_reset());
-        },
+            println!(
+                "{}⚠ P2P Send not yet implemented in CLI. File: {}{}",
+                theme.color_warning(),
+                file,
+                theme.color_reset()
+            );
+        }
 
-        Commands::List { active, queued, completed, failed } => {
+        Commands::List {
+            active,
+            queued,
+            completed,
+            failed,
+        } => {
             let items = recovery::list();
             let mut filtered = items;
-            
+
             let any_filter = active || queued || completed || failed;
-            
+
             if any_filter {
-                filtered = filtered.into_iter().filter(|i| {
-                    (active && matches!(i.status, QueueStatus::Active)) ||
-                    (queued && matches!(i.status, QueueStatus::Queued)) ||
-                    (completed && matches!(i.status, QueueStatus::Complete { .. })) ||
-                    (failed && matches!(i.status, QueueStatus::Error { .. })) ||
-                    (active && matches!(i.status, QueueStatus::Seeding)) ||
-                    (queued && matches!(i.status, QueueStatus::Paused))
-                }).collect();
+                filtered = filtered
+                    .into_iter()
+                    .filter(|i| {
+                        (active && matches!(i.status, QueueStatus::Active))
+                            || (queued && matches!(i.status, QueueStatus::Queued))
+                            || (completed && matches!(i.status, QueueStatus::Complete { .. }))
+                            || (failed && matches!(i.status, QueueStatus::Error { .. }))
+                            || (active && matches!(i.status, QueueStatus::Seeding))
+                            || (queued && matches!(i.status, QueueStatus::Paused))
+                    })
+                    .collect();
             }
 
             // Convert to displayable format
@@ -283,19 +351,23 @@ async fn main() -> Result<()> {
                 .collect();
 
             println!("{}", format_queue_list(display_items, &theme));
-        },
+        }
 
         Commands::Clean { finished, failed } => {
             let items_before = recovery::list().len();
-            
+
             if finished || failed {
-                eprintln!("{}ℹ Selective cleaning not yet implemented, clearing all...{}", theme.color_warning(), theme.color_reset());
+                eprintln!(
+                    "{}ℹ Selective cleaning not yet implemented, clearing all...{}",
+                    theme.color_warning(),
+                    theme.color_reset()
+                );
             }
-            
+
             recovery::clear_all();
-            
+
             println!("{}", format_clean_summary(items_before, None, &theme));
-        },
+        }
 
         Commands::Config { action } => {
             let mut settings = AppSettings::load_from_disk();
@@ -303,72 +375,142 @@ async fn main() -> Result<()> {
                 ConfigAction::Get { key } => {
                     let val = serde_json::to_value(&settings)?;
                     if let Some(v) = get_json_path(&val, &key) {
-                        println!("{}{}{}  = {}", theme.color_accent(), key, theme.color_reset(), v);
+                        println!(
+                            "{}{}{}  = {}",
+                            theme.color_accent(),
+                            key,
+                            theme.color_reset(),
+                            v
+                        );
                     } else {
-                        println!("{}Key not found: {}{}",theme.color_warning(), key, theme.color_reset());
+                        println!(
+                            "{}Key not found: {}{}",
+                            theme.color_warning(),
+                            key,
+                            theme.color_reset()
+                        );
                     }
-                },
+                }
 
                 ConfigAction::Set { key, value } => {
                     let mut val = serde_json::to_value(&settings)?;
                     if set_json_path(&mut val, &key, &value) {
                         settings = serde_json::from_value(val)?;
                         settings.save_to_disk()?;
-                        println!("{}✓ Set {}{}  = {}", theme.color_success(), key, theme.color_reset(), value);
+                        println!(
+                            "{}✓ Set {}{}  = {}",
+                            theme.color_success(),
+                            key,
+                            theme.color_reset(),
+                            value
+                        );
                     } else {
-                        println!("{}✗ Failed to set key: {}{}",theme.color_error(), key, theme.color_reset());
+                        println!(
+                            "{}✗ Failed to set key: {}{}",
+                            theme.color_error(),
+                            key,
+                            theme.color_reset()
+                        );
                     }
-                },
+                }
 
                 ConfigAction::List => {
                     let settings_json = serde_json::to_string_pretty(&settings)?;
                     println!("{}", format_config_display(&settings_json, &theme));
-                },
+                }
             }
-        },
+        }
 
         Commands::Check => {
-            println!("{}🔍 Checking system dependencies...{}\n", theme.color_info(), theme.color_reset());
-            
-            match omniget_core::core::dependencies::ensure_dependencies(false, Some(reporter.clone())).await {
+            println!(
+                "{}🔍 Checking system dependencies...{}\n",
+                theme.color_info(),
+                theme.color_reset()
+            );
+
+            match mangofetch_core::core::dependencies::ensure_dependencies(
+                false,
+                Some(reporter.clone()),
+            )
+            .await
+            {
                 Ok(deps) => {
                     let yt_dlp_path = deps.ytdlp.as_ref().map(|p| p.to_string_lossy().to_string());
-                    let ffmpeg_path = deps.ffmpeg.as_ref().map(|p| p.to_string_lossy().to_string());
-                    
-                    println!("{}", format_dependency_check(
-                        yt_dlp_path.as_deref(),
-                        ffmpeg_path.as_deref(),
-                        &theme
-                    ));
-                },
-                Err(e) => println!("{}❌ Dependency check failed: {}{}",theme.color_error(), e, theme.color_reset()),
+                    let ffmpeg_path = deps
+                        .ffmpeg
+                        .as_ref()
+                        .map(|p| p.to_string_lossy().to_string());
+
+                    println!(
+                        "{}",
+                        format_dependency_check(
+                            yt_dlp_path.as_deref(),
+                            ffmpeg_path.as_deref(),
+                            &theme
+                        )
+                    );
+                }
+                Err(e) => println!(
+                    "{}❌ Dependency check failed: {}{}",
+                    theme.color_error(),
+                    e,
+                    theme.color_reset()
+                ),
             }
-        },
+        }
 
         Commands::Update => {
-            println!("{}⬆️  Updating dependencies (yt-dlp, FFmpeg)...{}\n", theme.color_accent(), theme.color_reset());
-            
-            match omniget_core::core::dependencies::ensure_dependencies(true, Some(reporter.clone())).await {
+            println!(
+                "{}⬆️  Updating dependencies (yt-dlp, FFmpeg)...{}\n",
+                theme.color_accent(),
+                theme.color_reset()
+            );
+
+            match mangofetch_core::core::dependencies::ensure_dependencies(
+                true,
+                Some(reporter.clone()),
+            )
+            .await
+            {
                 Ok(deps) => {
                     let yt_dlp_path = deps.ytdlp.as_ref().map(|p| p.to_string_lossy().to_string());
-                    let ffmpeg_path = deps.ffmpeg.as_ref().map(|p| p.to_string_lossy().to_string());
-                    
-                    println!("{}✓ Update complete.{}\n", theme.color_success(), theme.color_reset());
-                    println!("{}", format_dependency_check(
-                        yt_dlp_path.as_deref(),
-                        ffmpeg_path.as_deref(),
-                        &theme
-                    ));
-                },
-                Err(e) => println!("{}❌ Update failed: {}{}",theme.color_error(), e, theme.color_reset()),
+                    let ffmpeg_path = deps
+                        .ffmpeg
+                        .as_ref()
+                        .map(|p| p.to_string_lossy().to_string());
+
+                    println!(
+                        "{}✓ Update complete.{}\n",
+                        theme.color_success(),
+                        theme.color_reset()
+                    );
+                    println!(
+                        "{}",
+                        format_dependency_check(
+                            yt_dlp_path.as_deref(),
+                            ffmpeg_path.as_deref(),
+                            &theme
+                        )
+                    );
+                }
+                Err(e) => println!(
+                    "{}❌ Update failed: {}{}",
+                    theme.color_error(),
+                    e,
+                    theme.color_reset()
+                ),
             }
-        },
+        }
 
         Commands::Logs { tail } => {
-            let log_dir = omniget_core::core::paths::app_data_dir().map(|d| d.join("logs"));
+            let log_dir = mangofetch_core::core::paths::app_data_dir().map(|d| d.join("logs"));
             if let Some(dir) = log_dir {
                 if !dir.exists() {
-                    println!("{}ℹ No logs found.{}",theme.color_info(), theme.color_reset());
+                    println!(
+                        "{}ℹ No logs found.{}",
+                        theme.color_info(),
+                        theme.color_reset()
+                    );
                     return Ok(());
                 }
 
@@ -377,55 +519,80 @@ async fn main() -> Result<()> {
                     .flatten()
                     .filter(|e| e.path().extension().map_or(false, |ext| ext == "log"))
                     .collect();
-                
+
                 files.sort_by_key(|e| e.metadata().and_then(|m| m.modified()).ok());
-                
+
                 if let Some(last_file) = files.last() {
                     let path = last_file.path();
-                    println!("{}📋 Last {} lines from:{}  {}\n", 
-                        theme.color_info(), tail, theme.color_reset(), path.display());
-                    
+                    println!(
+                        "{}📋 Last {} lines from:{}  {}\n",
+                        theme.color_info(),
+                        tail,
+                        theme.color_reset(),
+                        path.display()
+                    );
+
                     let content = std::fs::read_to_string(&path)?;
                     let lines: Vec<_> = content.lines().collect();
                     let start = lines.len().saturating_sub(tail);
-                    
+
                     for line in &lines[start..] {
                         println!("  {}", line);
                     }
                 } else {
-                    println!("{}ℹ No log files found in: {}{}",
-                        theme.color_info(), dir.display(), theme.color_reset());
+                    println!(
+                        "{}ℹ No log files found in: {}{}",
+                        theme.color_info(),
+                        dir.display(),
+                        theme.color_reset()
+                    );
                 }
             } else {
-                println!("{}⚠ Could not determine log directory.{}",theme.color_warning(), theme.color_reset());
+                println!(
+                    "{}⚠ Could not determine log directory.{}",
+                    theme.color_warning(),
+                    theme.color_reset()
+                );
             }
-        },
+        }
 
         Commands::About { topic } => {
             let topic = topic.unwrap_or(AboutTopic::Version);
             match topic {
                 AboutTopic::Version => {
-                    println!("{}🚀 OmniGet CLI{}", theme.color_accent(), theme.color_reset());
+                    println!(
+                        "{}🚀 MangoFetch CLI{}",
+                        theme.color_accent(),
+                        theme.color_reset()
+                    );
                     println!("   Version: {}", env!("CARGO_PKG_VERSION"));
                     println!("   Edition: 2021");
                     println!("   License: GPL-3.0");
-                },
+                }
                 AboutTopic::Roadmap => {
                     println!("{}📊 Roadmap{}:", theme.color_accent(), theme.color_reset());
                     println!("   v0.3.0 - Interactive TUI mode (ratatui)");
                     println!("   v0.4.0 - Plugin management");
                     println!("   v0.5.0 - P2P file sharing");
-                },
+                }
                 AboutTopic::Changelog => {
-                    println!("{}📝 Changelog{}:", theme.color_accent(), theme.color_reset());
+                    println!(
+                        "{}📝 Changelog{}:",
+                        theme.color_accent(),
+                        theme.color_reset()
+                    );
                     println!("   v0.2.0 - Standalone rewrite: GUI removed, core refactored");
                     println!("   v0.1.1-fix - Fixed build architecture");
                     println!("   v0.1.0 - Initial release");
-                },
+                }
                 AboutTopic::Terms => {
-                    println!("{}⚖️  License: GPL-3.0{}",theme.color_info(), theme.color_reset());
+                    println!(
+                        "{}⚖️  License: GPL-3.0{}",
+                        theme.color_info(),
+                        theme.color_reset()
+                    );
                     println!("   Respect content creator rights. Use responsibly.");
-                },
+                }
             }
         }
     }
@@ -438,7 +605,7 @@ async fn main() -> Result<()> {
 // ============================================================================
 
 fn register_platforms(registry: &mut PlatformRegistry) {
-    use omniget_core::platforms::*;
+    use mangofetch_core::platforms::*;
     registry.register(Arc::new(instagram::InstagramDownloader::new()));
     registry.register(Arc::new(pinterest::PinterestDownloader::new()));
     registry.register(Arc::new(tiktok::TikTokDownloader::new()));
@@ -465,7 +632,8 @@ async fn perform_download(
     reporter: Arc<crate::reporter::CLIReporter>,
     theme: &Arc<dyn CliTheme>,
 ) -> Result<()> {
-    let downloader = registry.find_platform(url)
+    let downloader = registry
+        .find_platform(url)
         .ok_or_else(|| anyhow::anyhow!("No supported platform found for URL"))?;
     let platform_name = downloader.name().to_string();
 
@@ -476,30 +644,49 @@ async fn perform_download(
             .to_string()
     });
 
-    let deps = omniget_core::core::dependencies::ensure_dependencies(false, Some(reporter.clone())).await?;
+    let deps =
+        mangofetch_core::core::dependencies::ensure_dependencies(false, Some(reporter.clone()))
+            .await?;
 
     // Pre-fetch info to show title
-    let media_info = omniget_core::core::manager::queue::fetch_and_cache_info(
+    let media_info = mangofetch_core::core::manager::queue::fetch_and_cache_info(
         url,
         &*downloader,
         &platform_name,
-    ).await.ok();
+    )
+    .await
+    .ok();
 
     if let Some(ref info) = media_info {
-        println!("{}✓ Queued:{} {} [{}]", theme.color_success(), theme.color_reset(), info.title, platform_name);
+        println!(
+            "{}✓ Queued:{} {} [{}]",
+            theme.color_success(),
+            theme.color_reset(),
+            info.title,
+            platform_name
+        );
     } else {
-        println!("{}✓ Queued:{} {} [{}]", theme.color_success(), theme.color_reset(), url, platform_name);
+        println!(
+            "{}✓ Queued:{} {} [{}]",
+            theme.color_success(),
+            theme.color_reset(),
+            url,
+            platform_name
+        );
     }
 
     static ID_COUNTER: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
     let id = ID_COUNTER.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-    
+
     let mut q = queue.lock().await;
     q.enqueue(
         id,
         url.to_string(),
         platform_name,
-        media_info.as_ref().map(|i| i.title.clone()).unwrap_or_else(|| url.to_string()),
+        media_info
+            .as_ref()
+            .map(|i| i.title.clone())
+            .unwrap_or_else(|| url.to_string()),
         output_dir,
         None,
         quality,
@@ -517,7 +704,7 @@ async fn perform_download(
     );
 
     drop(q);
-    omniget_core::core::manager::queue::try_start_next(queue.clone()).await;
+    mangofetch_core::core::manager::queue::try_start_next(queue.clone()).await;
     Ok(())
 }
 

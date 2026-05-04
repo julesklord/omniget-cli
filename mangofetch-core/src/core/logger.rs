@@ -9,7 +9,7 @@ pub fn init_logging(verbose: bool) {
 
     let _ = std::fs::create_dir_all(&log_dir);
 
-    let file_appender = tracing_appender::rolling::daily(&log_dir, "omniget.log");
+    let file_appender = tracing_appender::rolling::daily(&log_dir, "mangofetch.log");
     let (non_blocking_appender, _guard) = non_blocking(file_appender);
 
     // Keep the guard alive as long as the program runs.

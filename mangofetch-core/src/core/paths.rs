@@ -1,10 +1,10 @@
 pub fn app_data_dir() -> Option<std::path::PathBuf> {
-    if let Ok(dir) = std::env::var("OMNIGET_DATA_DIR") {
+    if let Ok(dir) = std::env::var("MANGOFETCH_DATA_DIR") {
         return Some(std::path::PathBuf::from(dir));
     }
 
     let base = dirs::data_dir()?;
-    let new_path = base.join("wtf.tonho.omniget");
+    let new_path = base.join("mangofetch");
     let old_path = base.join("omniget");
 
     if old_path.exists() {

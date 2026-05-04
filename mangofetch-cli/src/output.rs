@@ -1,7 +1,7 @@
 // output.rs
 // ============================================================================
-// Enhanced Output Formatting Module for OmniGet CLI
-// Place in: src-tauri/omniget-cli/src/output.rs
+// Enhanced Output Formatting Module for MangoFetch CLI
+// Place in: mangofetch-cli/src/output.rs
 // ============================================================================
 
 use crate::reporter::CliTheme;
@@ -102,30 +102,16 @@ pub fn format_queue_list(
         };
 
         let status_colored = match status.as_str() {
-            s if s.contains("Active") => format!(
-                "{}{}{}",
-                theme.color_accent(),
-                status,
-                theme.color_reset()
-            ),
-            s if s.contains("Complete") => format!(
-                "{}{}{}",
-                theme.color_success(),
-                status,
-                theme.color_reset()
-            ),
-            s if s.contains("Error") => format!(
-                "{}{}{}",
-                theme.color_error(),
-                status,
-                theme.color_reset()
-            ),
-            _ => format!(
-                "{}{}{}",
-                theme.color_warning(),
-                status,
-                theme.color_reset()
-            ),
+            s if s.contains("Active") => {
+                format!("{}{}{}", theme.color_accent(), status, theme.color_reset())
+            }
+            s if s.contains("Complete") => {
+                format!("{}{}{}", theme.color_success(), status, theme.color_reset())
+            }
+            s if s.contains("Error") => {
+                format!("{}{}{}", theme.color_error(), status, theme.color_reset())
+            }
+            _ => format!("{}{}{}", theme.color_warning(), status, theme.color_reset()),
         };
 
         let platform_colored = format!(
@@ -153,10 +139,7 @@ pub fn format_queue_list(
 }
 
 /// Formats the `config list` output with better structure
-pub fn format_config_display(
-    config_json: &str,
-    theme: &Arc<dyn CliTheme>,
-) -> String {
+pub fn format_config_display(config_json: &str, theme: &Arc<dyn CliTheme>) -> String {
     // Parse and pretty-print with colors
     let mut output = format!(
         "{}⚙️  Configuration{}:\n",
@@ -174,7 +157,11 @@ pub fn format_config_display(
 }
 
 /// Helper to pretty-print JSON with colors
-fn format_json_pretty(value: &serde_json::Value, theme: &Arc<dyn CliTheme>, indent: usize) -> String {
+fn format_json_pretty(
+    value: &serde_json::Value,
+    theme: &Arc<dyn CliTheme>,
+    indent: usize,
+) -> String {
     let indent_str = "  ".repeat(indent);
     let next_indent = "  ".repeat(indent + 1);
 
@@ -215,20 +202,10 @@ fn format_json_pretty(value: &serde_json::Value, theme: &Arc<dyn CliTheme>, inde
             result
         }
         serde_json::Value::String(s) => {
-            format!(
-                "{}\"{}\"{}",
-                theme.color_info(),
-                s,
-                theme.color_reset()
-            )
+            format!("{}\"{}\"{}", theme.color_info(), s, theme.color_reset())
         }
         serde_json::Value::Number(n) => {
-            format!(
-                "{}{}{}",
-                theme.color_accent(),
-                n,
-                theme.color_reset()
-            )
+            format!("{}{}{}", theme.color_accent(), n, theme.color_reset())
         }
         serde_json::Value::Bool(b) => {
             let color = if *b {
@@ -323,7 +300,11 @@ pub fn format_batch_summary(
     failed: usize,
     theme: &Arc<dyn CliTheme>,
 ) -> String {
-    let mut output = format!("\n{}📊 Batch Download Summary{}:\n", theme.color_info(), theme.color_reset());
+    let mut output = format!(
+        "\n{}📊 Batch Download Summary{}:\n",
+        theme.color_info(),
+        theme.color_reset()
+    );
     output.push_str(&format!("  Total URLs: {}\n", total));
     output.push_str(&format!(
         "  {}Queued: {}{}  ",

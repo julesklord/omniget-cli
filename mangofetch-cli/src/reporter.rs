@@ -1,8 +1,8 @@
 use async_trait::async_trait;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
-use omniget_core::core::events::QueueItemProgress;
-use omniget_core::core::traits::DownloadReporter;
-use omniget_core::models::queue::QueueItemInfo;
+use mangofetch_core::core::events::QueueItemProgress;
+use mangofetch_core::core::traits::DownloadReporter;
+use mangofetch_core::models::queue::QueueItemInfo;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -28,7 +28,12 @@ pub trait CliTheme: Send + Sync {
     fn format_phase(&self, download_id: u64, phase: &str) -> String;
 
     /// Format completion message
-    fn format_complete(&self, title: &str, file_path: Option<&str>, size_bytes: Option<u64>) -> String;
+    fn format_complete(
+        &self,
+        title: &str,
+        file_path: Option<&str>,
+        size_bytes: Option<u64>,
+    ) -> String;
 
     /// Format error message
     fn format_error(&self, download_id: u64, error: &str) -> String;
@@ -87,17 +92,17 @@ impl CliTheme for BrutalistTheme {
 
     fn color_platform(&self, platform: &str) -> String {
         match platform.to_lowercase().as_str() {
-            "youtube" => "\x1b[1;31m".to_string(), // Red
-            "instagram" => "\x1b[1;35m".to_string(), // Magenta
-            "tiktok" => "\x1b[1;36m".to_string(), // Cyan
+            "youtube" => "\x1b[1;31m".to_string(),       // Red
+            "instagram" => "\x1b[1;35m".to_string(),     // Magenta
+            "tiktok" => "\x1b[1;36m".to_string(),        // Cyan
             "twitter" | "x" => "\x1b[1;30m".to_string(), // Dark Gray
-            "reddit" => "\x1b[1;33m".to_string(), // Orange/Yellow
-            "twitch" => "\x1b[1;35m".to_string(), // Purple/Magenta
-            "pinterest" => "\x1b[1;31m".to_string(), // Red
-            "vimeo" => "\x1b[1;36m".to_string(), // Cyan
-            "bluesky" => "\x1b[1;34m".to_string(), // Blue
-            "bilibili" => "\x1b[1;36m".to_string(), // Cyan
-            _ => "\x1b[1;37m".to_string(), // White
+            "reddit" => "\x1b[1;33m".to_string(),        // Orange/Yellow
+            "twitch" => "\x1b[1;35m".to_string(),        // Purple/Magenta
+            "pinterest" => "\x1b[1;31m".to_string(),     // Red
+            "vimeo" => "\x1b[1;36m".to_string(),         // Cyan
+            "bluesky" => "\x1b[1;34m".to_string(),       // Blue
+            "bilibili" => "\x1b[1;36m".to_string(),      // Cyan
+            _ => "\x1b[1;37m".to_string(),               // White
         }
     }
 
@@ -111,19 +116,14 @@ impl CliTheme for BrutalistTheme {
 
     fn format_phase(&self, _download_id: u64, phase: &str) -> String {
         let icon = match phase.to_lowercase().as_str() {
-            p if p.contains("fetch") || p.contains("info") => "🔍",
-            p if p.contains("download") => "⬇️ ",
-            p if p.contains("process") || p.contains("merge") => "🔧",
-            p if p.contains("done") || p.contains("complete") => "✓ ",
-            _ => "⏳",
+            p if p.contains("fetch") || p.contains("info") => self._unicode_or_ascii("🔍", "Q"),
+            p if p.contains("download") => self._unicode_or_ascii("⬇️ ", "V"),
+            p if p.contains("process") || p.contains("merge") => self._unicode_or_ascii("🔧", "P"),
+            p if p.contains("done") || p.contains("complete") => self._unicode_or_ascii("✓ ", "+"),
+            _ => self._unicode_or_ascii("⏳", "-"),
         };
 
-        format!(
-            "{} {} Phase: {}",
-            self.color_info(),
-            icon,
-            phase,
-        )
+        format!("{} {} Phase: {}", self.color_info(), icon, phase,)
     }
 
     fn format_complete(
@@ -136,18 +136,22 @@ impl CliTheme for BrutalistTheme {
             .map(|b| format_bytes(b))
             .unwrap_or_else(|| "unknown size".to_string());
 
+        let icon = self._unicode_or_ascii("✓", "+");
+
         match file_path {
             Some(path) => format!(
-                "{}✓ COMPLETE{} {} [{}] → {}",
+                "{} {} COMPLETE{} {} [{}] → {}",
                 self.color_success(),
+                icon,
                 self.color_reset(),
                 title,
                 size_str,
                 path
             ),
             None => format!(
-                "{}✓ COMPLETE{} {} [{}]",
+                "{} {} COMPLETE{} {} [{}]",
                 self.color_success(),
+                icon,
                 self.color_reset(),
                 title,
                 size_str
@@ -156,9 +160,11 @@ impl CliTheme for BrutalistTheme {
     }
 
     fn format_error(&self, download_id: u64, error: &str) -> String {
+        let icon = self._unicode_or_ascii("✗", "x");
         format!(
-            "{}✗ ERROR (ID:{}){} {}",
+            "{} {} ERROR (ID:{}){} {}",
             self.color_error(),
+            icon,
             download_id,
             self.color_reset(),
             error
@@ -211,11 +217,16 @@ impl CLIReporter {
 
     fn create_progress_bar(&self, title: &str) -> ProgressBar {
         let pb = self.multi_progress.add(ProgressBar::new(100));
+        let chars = if self.theme.supports_unicode() {
+            "█>░"
+        } else {
+            "##-"
+        };
         pb.set_style(
             ProgressStyle::default_bar()
                 .template(&self.theme.progress_template())
                 .unwrap()
-                .progress_chars("█>░"),
+                .progress_chars(chars),
         );
         pb.set_prefix(title.to_string());
         pb
@@ -240,7 +251,7 @@ impl DownloadReporter for CLIReporter {
 
         // Format speed and ETA inline
         let speed_mbs = (info.speed_bytes_per_sec / 1_048_576.0 * 10.0).round() / 10.0;
-        
+
         let eta_str = if info.speed_bytes_per_sec > 0.0 && info.total_bytes.is_some() {
             let total = info.total_bytes.unwrap();
             let remaining = total.saturating_sub(info.downloaded_bytes);
@@ -267,11 +278,9 @@ impl DownloadReporter for CLIReporter {
     ) {
         let mut bars = self.bars.lock().unwrap();
         if let Some(pb) = bars.remove(&download_id) {
-            let message = self.theme.format_complete(
-                "Download",
-                file_path.as_deref(),
-                file_size_bytes,
-            );
+            let message =
+                self.theme
+                    .format_complete("Download", file_path.as_deref(), file_size_bytes);
             pb.finish_with_message(message);
         }
     }
@@ -288,9 +297,13 @@ impl DownloadReporter for CLIReporter {
     }
 
     fn on_retry(&self, download_id: u64, attempt: u32, delay_ms: u64) {
-        let icon = "🔄";
+        let icon = if self.theme.supports_unicode() {
+            "🔄"
+        } else {
+            "R"
+        };
         let message = format!(
-            "{}{}(ID:{}) Retry attempt {} in {}ms{}",
+            "{} {} (ID:{}) Retry attempt {} in {}ms{}",
             self.theme.color_warning(),
             icon,
             download_id,
@@ -324,9 +337,16 @@ impl DownloadReporter for CLIReporter {
             .map(|d| format_duration(d as u64))
             .unwrap_or_else(|| "unknown duration".to_string());
 
+        let icon = if self.theme.supports_unicode() {
+            "📺"
+        } else {
+            "TV"
+        };
+
         let message = format!(
-            "{}📺 Found:{} {} by {} {} [{}]",
+            "{} {} Found:{} {} by {} {} [{}]",
             self.theme.color_info(),
+            icon,
             self.theme.color_reset(),
             title,
             author,
@@ -454,7 +474,10 @@ mod tests {
 
     #[test]
     fn test_extract_platform() {
-        assert_eq!(extract_platform("https://youtube.com/watch?v=123"), "YouTube");
+        assert_eq!(
+            extract_platform("https://youtube.com/watch?v=123"),
+            "YouTube"
+        );
         assert_eq!(
             extract_platform("https://www.tiktok.com/@user/video/123"),
             "TikTok"

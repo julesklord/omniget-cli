@@ -155,7 +155,9 @@ impl InstagramDownloader {
 
     fn random_alpha_string(len: usize) -> String {
         let mut rng = rand::thread_rng();
-        let chars: Vec<char> = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ".chars().collect();
+        let chars: Vec<char> = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+            .chars()
+            .collect();
         (0..len)
             .map(|_| chars[rng.gen_range(0..chars.len())])
             .collect()
@@ -595,7 +597,9 @@ impl InstagramDownloader {
             opts.download_mode.as_deref(),
             opts.format_id.as_deref(),
             opts.filename_template.as_deref(),
-            opts.referer.as_deref().or(Some("https://www.instagram.com/")),
+            opts.referer
+                .as_deref()
+                .or(Some("https://www.instagram.com/")),
             opts.cancel_token.clone(),
             None,
             opts.concurrent_fragments,
@@ -634,11 +638,6 @@ impl InstagramDownloader {
 
         Err(anyhow!("No media found in embed"))
     }
-}
-
-fn base64_url_encode(bytes: &[u8]) -> String {
-    use base64::Engine;
-    base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(bytes)
 }
 
 #[async_trait]
