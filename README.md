@@ -78,6 +78,24 @@ If you find a bug, open an issue. If you want to add a feature, open a PR. If yo
 **Let's build the best downloader for the terminal.**
 
 ---
+| Version | Milestone |
+|---------|-----------|
+| **v0.2.0** | Standalone rewrite — GUI removed, core refactored ✅ |
+| **v0.3.0** | Interactive TUI mode (`ratatui`) |
+| **v0.4.0** | Plugin system |
+| **v0.5.0** | P2P file sharing |
+
+## Related projects
+
+- [yt-dlp](https://github.com/yt-dlp/yt-dlp) — Media extraction engine
+- [omniget (tonhowft)](https://github.com/tonhowtf/omniget) — omniget - the original project who provides the core. 
+
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+## License
 
 <p align="center">
   Built with 🦀 and 🥭 by <a href="https://github.com/julesklord">Jules Martins</a>
